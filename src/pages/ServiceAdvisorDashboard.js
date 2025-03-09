@@ -3,7 +3,9 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import "./ServiceAdvisorDashboard.css"; // Updated CSS for luxury design
 
-const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+//const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "https://car-tracking-system-backend.onrender.com";
+
 
 const ServiceAdvisorDashboard = () => {
   const [vehicleNumber, setVehicleNumber] = useState("");

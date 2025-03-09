@@ -2,7 +2,10 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import "./BayTechnicianDashboard.css";
 
-const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+//const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+
+const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "https://car-tracking-system-backend.onrender.com";
+
 
 const BayTechnicianDashboard = () => {
   const [vehicleNumber, setVehicleNumber] = useState("");

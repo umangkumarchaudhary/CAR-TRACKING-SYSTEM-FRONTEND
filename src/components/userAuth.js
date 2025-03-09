@@ -4,7 +4,8 @@ import { useNavigate } from "react-router-dom";
 import logo from "../images/logo.jpg"; // Import the logo
 import "./userAuth.css"; // Import the CSS file
 
-const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "https://car-tracking-system-backend.onrender.com";
+
 
 const UserAuth = () => {
   const [isRegister, setIsRegister] = useState(false);
