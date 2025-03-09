@@ -1,0 +1,42 @@
+.dashboard-container {
+    padding: 20px;
+    font-family: Arial, sans-serif;
+    text-align: center;
+  }
+  
+  .vehicle-table {
+    width: 100%;
+    margin-top: 20px;
+    border-collapse: collapse;
+  }
+  
+  .vehicle-table th, .vehicle-table td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: center;
+  }
+  
+  .vehicle-table th {
+    background-color: #007bff;
+    color: white;
+  }
+  
+  .open {
+    color: green;
+    font-weight: bold;
+  }
+  
+  .closed {
+    color: red;
+    font-weight: bold;
+  }
+  
+  .logout-btn {
+    margin-top: 20px;
+    padding: 10px 20px;
+    background-color: red;
+    color: white;
+    border: none;
+    cursor: pointer;
+  }
+  
