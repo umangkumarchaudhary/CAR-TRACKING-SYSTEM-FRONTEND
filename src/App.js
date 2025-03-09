@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import UserAuth from "./components/userAuth";
 import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -16,9 +16,12 @@ function App() {
   return (
     <Router>
       <Routes>
+        {/* Default Route: Redirect / to /login */}
+        <Route path="/" element={<Navigate to="/login" />} />
+        
         <Route path="/login" element={<UserAuth />} />
         <Route path="/register" element={<UserAuth isRegisterPage={true} />} />
-        <Route path="/dashboard" element={<Dashboard/>} /> 
+        <Route path="/dashboard" element={<Dashboard />} /> 
 
         {/* Role-Based Dashboards */}
         <Route path="/admin-dashboard" element={<AdminDashboard />} />
