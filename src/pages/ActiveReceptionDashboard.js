@@ -3,7 +3,7 @@ import axios from "axios";
 import "./ActiveReceptionDashboard.css"; // Updated CSS file
 import { FaCar, FaPlay, FaCheck, FaSpinner, FaChartLine, FaList, FaHistory } from "react-icons/fa"; // Icons for better visuals
 
-const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "https://car-tracking-system-backend.onrender.com";
 
 const ActiveReceptionDashboard = () => {
   const [vehicles, setVehicles] = useState([]);
