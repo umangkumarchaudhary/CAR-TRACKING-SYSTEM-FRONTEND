@@ -1,127 +1,335 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
+import "./ActiveReceptionDashboard.css"; // Updated CSS file
+import { FaCar, FaPlay, FaCheck, FaSpinner, FaChartLine, FaList, FaHistory } from "react-icons/fa"; // Icons for better visuals
 
-//const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
-const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "https://car-tracking-system-backend.onrender.com";
+const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
 
-
-const AdminDashboard = () => {
+const ActiveReceptionDashboard = () => {
   const [vehicles, setVehicles] = useState([]);
-  const [stageCounts, setStageCounts] = useState({});
-  const [avgStageTimes, setAvgStageTimes] = useState({});
-  const [uniqueVehicleCount, setUniqueVehicleCount] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+  const [vehicleNumber, setVehicleNumber] = useState("");
+  const [activeTab, setActiveTab] = useState("in-progress"); // Tracks active tab
+
+  const fetchVehicles = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/vehicles`);
+      if (response.data.success) {
+        const sortedVehicles = response.data.vehicles.sort(
+          (a, b) => new Date(b.entryTime) - new Date(a.entryTime)
+        );
+        setVehicles(sortedVehicles);
+      }
+    } catch (error) {
+      console.error("Error fetching vehicles:", error);
+      setMessage("Error loading vehicle data.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchVehicles();
   }, []);
 
-  const fetchVehicles = async () => {
+  const handleVehicleEntry = async () => {
+    if (!vehicleNumber) {
+      setMessage("Please enter a vehicle number.");
+      return;
+    }
+
+    setLoading(true);
     try {
-      const response = await axios.get(`${API_BASE_URL}/vehicles`); // Fetch all vehicle records
-      const data = response.data.vehicles;
-
-      setVehicles(data);
-
-      // Extract unique vehicle numbers
-      const uniqueVehicles = new Set(data.map((v) => v.vehicleNumber));
-      setUniqueVehicleCount(uniqueVehicles.size);
-
-      // Calculate total vehicles at each stage
-      const stageData = {};
-      const stageTimes = {};
-
-      data.forEach((vehicle) => {
-        vehicle.stages.forEach((stage, index) => {
-          const { stageName, timestamp } = stage;
-
-          // Count vehicles per stage
-          stageData[stageName] = (stageData[stageName] || 0) + 1;
-
-          // Calculate average time per stage
-          if (index > 0) {
-            const prevTimestamp = new Date(vehicle.stages[index - 1].timestamp);
-            const currentTimestamp = new Date(timestamp);
-            const timeSpent = (currentTimestamp - prevTimestamp) / 60000; // Convert to minutes
-
-            if (!stageTimes[stageName]) {
-              stageTimes[stageName] = { totalTime: 0, count: 0 };
-            }
-            stageTimes[stageName].totalTime += timeSpent;
-            stageTimes[stageName].count += 1;
-          }
-        });
+      const response = await axios.post(`${API_BASE_URL}/api/vehicle-check`, {
+        vehicleNumber: vehicleNumber.trim().toUpperCase(),
+        role: "Security",
+        stageName: "Security Gate",
+        eventType: "Entry",
       });
 
-      setStageCounts(stageData);
-
-      // Compute average times per stage
-      const avgTimes = {};
-      for (const stage in stageTimes) {
-        avgTimes[stage] = (stageTimes[stage].totalTime / stageTimes[stage].count).toFixed(2);
+      if (response.data.success) {
+        setMessage("Vehicle entered successfully.");
+        setVehicleNumber("");
+        fetchVehicles();
+      } else {
+        setMessage(response.data.message);
       }
-      setAvgStageTimes(avgTimes);
     } catch (error) {
-      console.error("Error fetching vehicles:", error);
+      console.error("Error entering vehicle:", error);
+      setMessage("Error processing vehicle entry.");
+    } finally {
+      setLoading(false);
     }
   };
 
+  const handleStart = async (vehicleId) => {
+    setLoading(true);
+    try {
+      const vehicle = vehicles.find((v) => v._id === vehicleId);
+      if (!vehicle) return;
+
+      const response = await axios.post(`${API_BASE_URL}/api/vehicle-check`, {
+        vehicleNumber: vehicle.vehicleNumber,
+        role: "Inspection Technician",
+        stageName: "Interactive Bay",
+        eventType: "Start",
+      });
+
+      if (response.data.success) {
+        setMessage("Vehicle has started work.");
+        fetchVehicles();
+      } else {
+        setMessage(response.data.message);
+      }
+    } catch (error) {
+      console.error("Error starting vehicle:", error);
+      setMessage("Error processing vehicle start.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFinish = async (vehicleId) => {
+    setLoading(true);
+    try {
+      const vehicle = vehicles.find((v) => v._id === vehicleId);
+      if (!vehicle) return;
+
+      const response = await axios.post(`${API_BASE_URL}/api/vehicle-check`, {
+        vehicleNumber: vehicle.vehicleNumber,
+        role: "Inspection Technician",
+        stageName: "Interactive Bay",
+        eventType: "Finish",
+      });
+
+      if (response.data.success) {
+        setMessage("Vehicle has finished work.");
+        fetchVehicles();
+      } else {
+        setMessage(response.data.message);
+      }
+    } catch (error) {
+      console.error("Error finishing vehicle:", error);
+      setMessage("Error processing vehicle finish.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Calculate Dashboard Metrics
+  const calculateMetrics = () => {
+    const today = new Date().toISOString().split("T")[0]; // Get today's date in YYYY-MM-DD format
+
+    const todayVehicles = vehicles.filter((vehicle) =>
+      new Date(vehicle.entryTime).toISOString().split("T")[0] === today
+    );
+
+    const finishedToday = todayVehicles.filter((vehicle) =>
+      vehicle.stages.some((stage) => stage.eventType === "Finish")
+    );
+
+    const totalCarsToday = finishedToday.length;
+
+    const averageTimeToday =
+      totalCarsToday > 0
+        ? finishedToday.reduce((sum, vehicle) => {
+            const startStage = vehicle.stages.find((stage) => stage.eventType === "Start");
+            const finishStage = vehicle.stages.find((stage) => stage.eventType === "Finish");
+            if (startStage && finishStage) {
+              const startTime = new Date(startStage.timestamp);
+              const finishTime = new Date(finishStage.timestamp);
+              return sum + (finishTime - startTime);
+            }
+            return sum;
+          }, 0) / (totalCarsToday * 60000) // Convert milliseconds to minutes
+        : 0;
+
+    const averageTimeOverall =
+      vehicles.length > 0
+        ? vehicles.reduce((sum, vehicle) => {
+            const startStage = vehicle.stages.find((stage) => stage.eventType === "Start");
+            const finishStage = vehicle.stages.find((stage) => stage.eventType === "Finish");
+            if (startStage && finishStage) {
+              const startTime = new Date(startStage.timestamp);
+              const finishTime = new Date(finishStage.timestamp);
+              return sum + (finishTime - startTime);
+            }
+            return sum;
+          }, 0) / (vehicles.length * 60000) // Convert milliseconds to minutes
+        : 0;
+
+    return {
+      totalCarsToday,
+      averageTimeToday: averageTimeToday.toFixed(2),
+      averageTimeOverall: averageTimeOverall.toFixed(2),
+      totalCars: vehicles.length,
+    };
+  };
+
+  const metrics = calculateMetrics();
+
   return (
-    <div className="admin-dashboard">
-      <h2>Admin Dashboard</h2>
-      
-      <div className="dashboard-stats">
-        <h3>Total Vehicles Inside: {uniqueVehicleCount}</h3>
+    <div className="dashboard-container">
+      <h2 className="dashboard-title">
+        <FaCar className="icon" /> Active Reception Dashboard
+      </h2>
+
+      {loading && (
+        <div className="loading-overlay">
+          <FaSpinner className="spinner" /> Loading, please wait...
+        </div>
+      )}
+
+      <div className="vehicle-entry">
+        <input
+          type="text"
+          placeholder="Enter Vehicle Number"
+          value={vehicleNumber}
+          onChange={(e) => setVehicleNumber(e.target.value)}
+          disabled={loading}
+        />
+        <button className="btn-enter" onClick={handleVehicleEntry} disabled={loading}>
+          {loading ? <FaSpinner className="spinner" /> : "Enter Vehicle"}
+        </button>
       </div>
 
-      <div className="stage-summary">
-        <h3>Vehicles at Each Stage</h3>
-        <ul>
-          {Object.entries(stageCounts).map(([stage, count]) => (
-            <li key={stage}>{stage}: {count} vehicles</li>
-          ))}
-        </ul>
+      {/* Tab Buttons */}
+      <div className="tab-buttons">
+        <button
+          className={`tab-button ${activeTab === "in-progress" ? "active" : ""}`}
+          onClick={() => setActiveTab("in-progress")}
+        >
+          <FaList /> Vehicles in Progress
+        </button>
+        <button
+          className={`tab-button ${activeTab === "finished" ? "active" : ""}`}
+          onClick={() => setActiveTab("finished")}
+        >
+          <FaHistory /> Finished Vehicles
+        </button>
+        <button
+          className={`tab-button ${activeTab === "dashboard" ? "active" : ""}`}
+          onClick={() => setActiveTab("dashboard")}
+        >
+          <FaChartLine /> Dashboard
+        </button>
       </div>
 
-      <div className="avg-times">
-        <h3>Average Time Spent at Each Stage (minutes)</h3>
-        <ul>
-          {Object.entries(avgStageTimes).map(([stage, time]) => (
-            <li key={stage}>{stage}: {time} min</li>
-          ))}
-        </ul>
-      </div>
-
-      <div className="vehicle-history">
-        <h3>All Vehicle History</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Vehicle Number</th>
-              <th>Entry Time</th>
-              <th>Exit Time</th>
-              <th>Stages</th>
-            </tr>
-          </thead>
-          <tbody>
-            {vehicles.map((vehicle, index) => (
-              <tr key={index}>
-                <td>{vehicle.vehicleNumber}</td>
-                <td>{new Date(vehicle.entryTime).toLocaleString()}</td>
-                <td>{vehicle.exitTime ? new Date(vehicle.exitTime).toLocaleString() : "In Workshop"}</td>
-                <td>
-                  {vehicle.stages.map((stage, idx) => (
-                    <div key={idx}>
-                      <strong>{stage.stageName}</strong> - {new Date(stage.timestamp).toLocaleString()}
-                    </div>
-                  ))}
-                </td>
+      {/* Vehicles in Progress Table */}
+      {activeTab === "in-progress" && (
+        <>
+          <h3 className="section-title">
+            <FaPlay className="icon" /> Vehicles in Progress (Interactive Bay)
+          </h3>
+          <table className="vehicle-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Vehicle Number</th>
+                <th>Entry Time</th>
+                <th>Status</th>
+                <th>Action</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {vehicles
+                .filter((vehicle) => !vehicle.stages.some((stage) => stage.eventType === "Finish"))
+                .map((vehicle) => (
+                  <tr key={vehicle._id}>
+                    <td>{new Date(vehicle.entryTime).toLocaleDateString()}</td>
+                    <td>{vehicle.vehicleNumber}</td>
+                    <td>{new Date(vehicle.entryTime).toLocaleTimeString()}</td>
+                    <td className={vehicle.stages.some((stage) => stage.eventType === "Start") ? "in-progress" : "pending"}>
+                      {vehicle.stages.some((stage) => stage.eventType === "Start") ? "Work in Progress" : "Pending"}
+                    </td>
+                    <td>
+                      {!vehicle.stages.some((stage) => stage.eventType === "Start") ? (
+                        <button className="btn-start" onClick={() => handleStart(vehicle._id)} disabled={loading}>
+                          {loading ? <FaSpinner className="spinner" /> : "Start"}
+                        </button>
+                      ) : (
+                        <button className="btn-disabled" disabled>
+                          Work in Progress
+                        </button>
+                      )}
+
+                      {vehicle.stages.some((stage) => stage.eventType === "Start") &&
+                        !vehicle.stages.some((stage) => stage.eventType === "Finish") && (
+                          <button className="btn-finish" onClick={() => handleFinish(vehicle._id)} disabled={loading}>
+                            {loading ? <FaSpinner className="spinner" /> : "Finish"}
+                          </button>
+                        )}
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </>
+      )}
+
+      {/* Finished Vehicles Table */}
+      {activeTab === "finished" && (
+        <>
+          <h3 className="section-title">
+            <FaCheck className="icon" /> Finished Vehicles (Interactive Bay)
+          </h3>
+          <table className="vehicle-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Vehicle Number</th>
+                <th>Start Time</th>
+                <th>Finish Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {vehicles
+                .filter((vehicle) => vehicle.stages.some((stage) => stage.eventType === "Finish"))
+                .map((vehicle) => {
+                  const startStage = vehicle.stages.find((stage) => stage.eventType === "Start");
+                  const finishStage = vehicle.stages.find((stage) => stage.eventType === "Finish");
+
+                  return (
+                    <tr key={vehicle._id}>
+                      <td>{new Date(vehicle.entryTime).toLocaleDateString()}</td>
+                      <td>{vehicle.vehicleNumber}</td>
+                      <td>{startStage ? new Date(startStage.timestamp).toLocaleTimeString() : "N/A"}</td>
+                      <td>{finishStage ? new Date(finishStage.timestamp).toLocaleTimeString() : "N/A"}</td>
+                    </tr>
+                  );
+                })}
+            </tbody>
+          </table>
+        </>
+      )}
+
+      {/* Dashboard Section */}
+      {activeTab === "dashboard" && (
+        <div className="dashboard-metrics">
+          <div className="metric-card">
+            <h3>Average Time in Interactive Bay Today</h3>
+            <p>{metrics.averageTimeToday} minutes</p>
+          </div>
+          <div className="metric-card">
+            <h3>Total Cars Done Today</h3>
+            <p>{metrics.totalCarsToday}</p>
+          </div>
+          <div className="metric-card">
+            <h3>Average Time Overall</h3>
+            <p>{metrics.averageTimeOverall} minutes</p>
+          </div>
+          <div className="metric-card">
+            <h3>Total Cars as of Now</h3>
+            <p>{metrics.totalCars}</p>
+          </div>
+        </div>
+      )}
+
+      {message && <p className="message">{message}</p>}
     </div>
   );
 };
 
-export default AdminDashboard;
+export default ActiveReceptionDashboard;
